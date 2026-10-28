@@ -1,0 +1,18 @@
+{
+	"version": 9,
+	"$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+
+	"configurePresets": [
+		{
+			"name": "common",
+			"description": "Common settings for any configuration",
+			"hidden": true,
+
+			"generator": "Ninja",
+			"binaryDir": "Build/${presetName}",
+			"cacheVariables": {
+				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+			}
+		}
+	]
+}

@@ -1,0 +1,35 @@
+{
+	"version": 9,
+	"$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+
+	"configurePresets": [
+		{
+			"name": "debug",
+			"description": "Common settings for any debug configuration",
+			"hidden": true,
+
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+
+		{
+			"name": "release",
+			"description": "Common settings for any release configuration",
+			"hidden": true,
+
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		},
+
+		{
+			"name": "release-with-debug-info",
+			"hidden": true,
+
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "RelWithDebInfo"
+			}
+		}
+	]
+}

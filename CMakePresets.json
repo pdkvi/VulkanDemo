@@ -1,0 +1,38 @@
+{
+	"version": 9,
+	"$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+	"include": [
+		"${sourceDir}/CMake/Presets/Common.json",
+		"${sourceDir}/CMake/Presets/BuildTypes.json",
+		"${sourceDir}/CMake/Presets/Platforms.json"
+	],
+
+	"configurePresets": [
+		{
+			"name": "windows-debug",
+			"displayName": "Debug",
+			"description": "Windows debug configure preset",
+			"hidden": false,
+
+			"inherits": [ "common", "debug", "platform-windows" ]
+		},
+
+		{
+			"name": "windows-release",
+			"displayName": "Release",
+			"description": "Windows release configure preset",
+			"hidden": false,
+
+			"inherits": [ "common", "release", "platform-windows" ]
+		},
+
+		{
+			"name": "windows-release-with-debug-info",
+			"displayName": "RelWithDebInfo",
+			"description": "Windows release with debug information configure preset",
+			"hidden": false,
+
+			"inherits": [ "common", "release-with-debug-info", "platform-windows" ]
+		}
+	]
+}

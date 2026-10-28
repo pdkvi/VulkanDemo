@@ -1,0 +1,25 @@
+{
+	"version": 9,
+	"$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+
+	"configurePresets": [
+		{
+			"name": "platform-windows",
+			"description": "Common settings for any Windows configuration",
+			"hidden": true,
+			"vendor": {
+				"jetbrains.com/clion": {
+					"toolchain": "Visual Studio"
+				}
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			},
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "cl.exe"
+			}
+		}
+	]
+}
