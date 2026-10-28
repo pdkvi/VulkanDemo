@@ -63,7 +63,7 @@ private:
 		auto const queueFamilyIndex = [this] -> uint32_t
 		{
 			std::vector<vk::QueueFamilyProperties> const& queueFamilyProps = m_physicalDevice.getQueueFamilyProperties();
-			auto it = std::ranges::find_if(queueFamilyProps, [](vk::QueueFamilyProperties const& props)
+			auto const it = std::ranges::find_if(queueFamilyProps, [](vk::QueueFamilyProperties const& props)
 			{
 				return !!(props.queueFlags & vk::QueueFlagBits::eGraphics);
 			});
@@ -171,10 +171,7 @@ private:
 		auto suitableDeviceIt = physicalDevices.end();
 		for (auto it = physicalDevices.begin(); it != physicalDevices.end(); ++it)
 		{
-			vk::raii::PhysicalDevice const & device = *it;
-
-			vk::PhysicalDeviceProperties const & props = device.getProperties();
-			if (isDeviceSuitable(device))
+			if (vk::raii::PhysicalDevice const& device = *it; isDeviceSuitable(device))
 			{
 				suitableDeviceIt = it;
 				break;
@@ -198,11 +195,11 @@ private:
 		return result;
 	}
 
-	static VkBool32 VKAPI_CALL DebugMessengerCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		vk::DebugUtilsMessageTypeFlagsEXT messageType, vk::DebugUtilsMessengerCallbackDataEXT const* callbackData,
-		void* userData)
+	static VkBool32 VKAPI_CALL DebugMessengerCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT const messageSeverity,
+		vk::DebugUtilsMessageTypeFlagsEXT const messageType, vk::DebugUtilsMessengerCallbackDataEXT const* callbackData,
+		void* /*userData*/)
 	{
-		auto severityToStr = [](vk::DebugUtilsMessageSeverityFlagBitsEXT severity)
+		auto severityToStr = [](vk::DebugUtilsMessageSeverityFlagBitsEXT const severity)
 		{
 			switch (severity)
 			{
@@ -214,7 +211,7 @@ private:
 			}
 		};
 
-		auto typeToStr = [](vk::DebugUtilsMessageTypeFlagsEXT type) -> std::string
+		auto typeToStr = [](vk::DebugUtilsMessageTypeFlagsEXT const type) -> std::string
 		{
 			if (!type) return "none";
 
@@ -268,8 +265,8 @@ private:
 		std::cout << std::endl;
 
 		std::cout << "Available vulkan instance extensions:" << std::endl;
-		for (vk::ExtensionProperties const & ext : extProps)
-			std::cout << "\t- " << ext.extensionName << std::endl;
+		for (auto const& [extensionName, _] : extProps)
+			std::cout << "\t- " << extensionName << std::endl;
 		std::cout << std::endl;
 
 		std::array requestedValidationLayers = { "VK_LAYER_KHRONOS_validation" };
@@ -278,7 +275,7 @@ private:
 		std::vector<vk::LayerProperties> const & availableValidationLayers = m_context.enumerateInstanceLayerProperties();
 
 		std::cout << "Requested validation layers:" << std::endl;
-		for (std::string_view layerName : requestedValidationLayers)
+		for (std::string_view const layerName : requestedValidationLayers)
 			std::cout << "\t- " << layerName << std::endl;
 		std::cout << std::endl;
 
@@ -287,7 +284,7 @@ private:
 			std::cout << "\t- " << layer.layerName << " (" << layer.description << ")" << std::endl;
 		std::cout << std::endl;
 
-		auto unsupportedLayerIt = std::ranges::find_if(requestedValidationLayers, [&](char const * requiredLayer)
+		auto const unsupportedLayerIt = std::ranges::find_if(requestedValidationLayers, [&](char const * requiredLayer)
 		{
 			auto is_equal = [&](vk::LayerProperties const& layer)
 			{ return std::strcmp(layer.layerName, requiredLayer) == 0; };
@@ -332,13 +329,14 @@ private:
 		TerminateGLFW();
 	}
 
+	// ReSharper disable once CppMemberFunctionMayBeConst
 	void TerminateGLFW()
 	{
 		glfwDestroyWindow(m_wnd);
 		glfwTerminate();
 	}
 
-	void MainLoop()
+	void MainLoop() const
 	{
 		while (!glfwWindowShouldClose(m_wnd))
 			glfwPollEvents();
