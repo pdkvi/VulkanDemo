@@ -181,41 +181,129 @@ private:
 	{
 		vk::raii::ShaderModule shaderModule = CreateShaderModule(ReadFile("Shaders/slang.spv"));
 
-		// std::array shaderStagesInfo =
-		// {
-		// 	vk::PipelineShaderStageCreateInfo
-		// 	{
-		// 		.stage = vk::ShaderStageFlagBits::eVertex,
-		// 		.module = shaderModule,
-		// 		.pName = "vertMain"
-		// 	},
-		// 	vk::PipelineShaderStageCreateInfo
-		// 	{
-		// 		.stage = vk::ShaderStageFlagBits::eFragment,
-		// 		.module = shaderModule,
-		// 		.pName = "fragMain"
-		// 	},
-		// };
-		//
-		// vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-		//
-		// vk::PipelineInputAssemblyStateCreateInfo
-		// {
-		// 	.topology = vk::PrimitiveTopology::eTriangleList
-		// }
-		//
-		// std::vector<vk::DynamicState> const dynamicStates =
-		// {
-		// 	vk::DynamicState::eScissor,
-		// 	vk::DynamicState::eViewport,
-		// };
-		//
-		// vk::PipelineDynamicStateCreateInfo
-		// {
-		// 	.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
-		// 	.pDynamicStates = dynamicStates.data(),
-		// };
+		std::array shaderStagesInfo =
+		{
+			vk::PipelineShaderStageCreateInfo
+			{
+				.stage = vk::ShaderStageFlagBits::eVertex,
+				.module = shaderModule,
+				.pName = "vertMain"
+			},
+			vk::PipelineShaderStageCreateInfo
+			{
+				.stage = vk::ShaderStageFlagBits::eFragment,
+				.module = shaderModule,
+				.pName = "fragMain"
+			},
+		};
 
+		std::vector<vk::DynamicState> const dynamicStates =
+		{
+			vk::DynamicState::eScissor,
+			vk::DynamicState::eViewport,
+		};
+
+		vk::PipelineDynamicStateCreateInfo const dynamicStateInfo
+		{
+			.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+			.pDynamicStates = dynamicStates.data(),
+		};
+
+		vk::PipelineVertexInputStateCreateInfo const vertexInputInfo;
+
+		vk::PipelineInputAssemblyStateCreateInfo const inputAssemblyInfo
+		{
+			.topology = vk::PrimitiveTopology::eTriangleList
+		};
+
+		vk::Viewport const viewport
+		{
+			.x = 0.0f, .y = 0.0f,
+			.width = static_cast<float>(m_swapChainExtent.width),
+			.height = static_cast<float>(m_swapChainExtent.height),
+			.minDepth = 0.0f, .maxDepth = 1.0f
+		};
+
+		vk::Rect2D const scissor
+		{
+			.offset = vk::Offset2D{ .x = 0, .y = 0 },
+			.extent = m_swapChainExtent
+		};
+
+		vk::PipelineViewportStateCreateInfo const viewportStateInfo
+		{
+			.viewportCount = 1,
+			.scissorCount = 1,
+		};
+
+		vk::PipelineRasterizationStateCreateInfo const rasterizerStateInfo
+		{
+			.depthClampEnable = false,
+			.rasterizerDiscardEnable = false,
+			.polygonMode = vk::PolygonMode::eFill,
+			.cullMode = vk::CullModeFlagBits::eBack,
+			.frontFace = vk::FrontFace::eClockwise,
+			.depthBiasEnable = false,
+			.lineWidth = 1.0f
+		};
+
+		vk::PipelineMultisampleStateCreateInfo const multisamplingStateInfo
+		{
+			.rasterizationSamples = vk::SampleCountFlagBits::e1,
+			.sampleShadingEnable = false
+		};
+
+		vk::PipelineColorBlendAttachmentState const colorBlendAttachmentState
+		{
+			.blendEnable = false,
+			.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
+			.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
+			.colorBlendOp        = vk::BlendOp::eAdd,
+			.srcAlphaBlendFactor = vk::BlendFactor::eOne,
+			.dstAlphaBlendFactor = vk::BlendFactor::eZero,
+			.alphaBlendOp        = vk::BlendOp::eAdd,
+			.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+				vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA,
+		};
+
+		vk::PipelineColorBlendStateCreateInfo const colorBlendStateInfo
+		{
+			.logicOpEnable = false,
+			.logicOp = vk::LogicOp::eCopy,
+			.attachmentCount = 1,
+			.pAttachments = &colorBlendAttachmentState,
+		};
+
+		m_pipelineLayout = m_logicalDevice.createPipelineLayout(vk::PipelineLayoutCreateInfo
+		{
+			.setLayoutCount = 0,
+			.pushConstantRangeCount = 0,
+		});
+
+		vk::StructureChain const pipelineCreateInfoChain =
+		{
+			vk::GraphicsPipelineCreateInfo
+			{
+				.stageCount = 2,
+				.pStages = shaderStagesInfo.data(),
+				.pVertexInputState = &vertexInputInfo,
+				.pInputAssemblyState = &inputAssemblyInfo,
+				.pViewportState = &viewportStateInfo,
+				.pRasterizationState = &rasterizerStateInfo,
+				.pMultisampleState = &multisamplingStateInfo,
+				.pColorBlendState = &colorBlendStateInfo,
+				.pDynamicState = &dynamicStateInfo,
+				.layout = m_pipelineLayout,
+				.renderPass = nullptr,
+			},
+			vk::PipelineRenderingCreateInfo
+			{
+				.colorAttachmentCount = 1,
+				.pColorAttachmentFormats = &m_swapChainSurfaceFormat.format
+			}
+		};
+
+		m_graphicsPipeline = m_logicalDevice.createGraphicsPipeline(nullptr, pipelineCreateInfoChain.get());
 	}
 
 	vk::raii::ShaderModule CreateShaderModule(std::vector<char> const& byteCode) const
@@ -555,6 +643,8 @@ private:
 	std::vector<vk::raii::ImageView> m_swapChainImageViews;
 	vk::SurfaceFormatKHR m_swapChainSurfaceFormat;
 	vk::Extent2D m_swapChainExtent;
+	vk::raii::PipelineLayout m_pipelineLayout = nullptr;
+	vk::raii::Pipeline m_graphicsPipeline = nullptr;
 };
 
 int main()
