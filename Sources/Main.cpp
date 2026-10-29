@@ -58,6 +58,7 @@ private:
 		PickPhysicalDevice();
 		CreateLogicalDevice();
 		CreateSwapChain();
+		CreateImageViews();
 	}
 
 	void CreateSurface()
@@ -136,6 +137,25 @@ private:
 		});
 
 		m_swapChainImages = m_swapChain.getImages();
+	}
+
+	void CreateImageViews()
+	{
+		for (vk::Image const& image : m_swapChainImages)
+		{
+			m_swapChainImageViews.push_back(m_logicalDevice.createImageView(vk::ImageViewCreateInfo
+			{
+				.image = image,
+				.viewType = vk::ImageViewType::e2DArray,
+				.format = m_swapChainSurfaceFormat.format,
+				.subresourceRange = vk::ImageSubresourceRange
+				{
+					.aspectMask = vk::ImageAspectFlagBits::eColor,
+					.levelCount = 1,
+					.layerCount = 1,
+				},
+			}));
+		}
 	}
 
 	void CreateLogicalDevice()
@@ -463,6 +483,7 @@ private:
 	vk::raii::SurfaceKHR m_surface = nullptr;
 	vk::raii::SwapchainKHR m_swapChain = nullptr;
 	std::vector<vk::Image> m_swapChainImages;
+	std::vector<vk::raii::ImageView> m_swapChainImageViews;
 	vk::SurfaceFormatKHR m_swapChainSurfaceFormat;
 	vk::Extent2D m_swapChainExtent;
 };
