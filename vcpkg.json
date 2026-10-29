@@ -2,6 +2,7 @@
   "dependencies": [
     "vulkan",
     "vulkan-validationlayers",
-    "glfw3"
+    "glfw3",
+    "shader-slang"
   ]
 }

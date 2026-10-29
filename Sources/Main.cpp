@@ -1,4 +1,5 @@
 #include <ranges>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -7,6 +8,23 @@
 
 #define VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
 #include <vulkan/vulkan_raii.hpp>
+
+namespace
+{
+	std::vector<char> ReadFile(std::string const& filename)
+	{
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+		if (!file.is_open())
+			throw std::runtime_error{ "failed to open file!" };
+		
+		std::vector<char> buffer(file.tellg());
+		file.seekg(0, std::ios::beg);
+		file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+		file.close();
+
+		return buffer;
+	}
+}
 
 class Application
 {
@@ -59,6 +77,7 @@ private:
 		CreateLogicalDevice();
 		CreateSwapChain();
 		CreateImageViews();
+		CreateGraphicsPipeline();
 	}
 
 	void CreateSurface()
@@ -156,6 +175,56 @@ private:
 				},
 			}));
 		}
+	}
+
+	void CreateGraphicsPipeline()
+	{
+		vk::raii::ShaderModule shaderModule = CreateShaderModule(ReadFile("Shaders/slang.spv"));
+
+		// std::array shaderStagesInfo =
+		// {
+		// 	vk::PipelineShaderStageCreateInfo
+		// 	{
+		// 		.stage = vk::ShaderStageFlagBits::eVertex,
+		// 		.module = shaderModule,
+		// 		.pName = "vertMain"
+		// 	},
+		// 	vk::PipelineShaderStageCreateInfo
+		// 	{
+		// 		.stage = vk::ShaderStageFlagBits::eFragment,
+		// 		.module = shaderModule,
+		// 		.pName = "fragMain"
+		// 	},
+		// };
+		//
+		// vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+		//
+		// vk::PipelineInputAssemblyStateCreateInfo
+		// {
+		// 	.topology = vk::PrimitiveTopology::eTriangleList
+		// }
+		//
+		// std::vector<vk::DynamicState> const dynamicStates =
+		// {
+		// 	vk::DynamicState::eScissor,
+		// 	vk::DynamicState::eViewport,
+		// };
+		//
+		// vk::PipelineDynamicStateCreateInfo
+		// {
+		// 	.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+		// 	.pDynamicStates = dynamicStates.data(),
+		// };
+
+	}
+
+	vk::raii::ShaderModule CreateShaderModule(std::vector<char> const& byteCode) const
+	{
+		return m_logicalDevice.createShaderModule(vk::ShaderModuleCreateInfo
+		{
+			.codeSize = byteCode.size() * sizeof(char),
+			.pCode = reinterpret_cast<uint32_t const*>(byteCode.data())
+		});
 	}
 
 	void CreateLogicalDevice()
