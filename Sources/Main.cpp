@@ -57,6 +57,7 @@ private:
 		CreateSurface();
 		PickPhysicalDevice();
 		CreateLogicalDevice();
+		CreateSwapChain();
 	}
 
 	void CreateSurface()
@@ -66,6 +67,75 @@ private:
 			throw std::runtime_error{"failed to create window surface"};
 
 		m_surface = vk::raii::SurfaceKHR{m_instance, std::move(surface)};
+	}
+
+	vk::SurfaceFormatKHR ChooseSwapChainSurfaceFormat(std::vector<vk::SurfaceFormatKHR> const& availFormats)
+	{
+		auto const formatIt = std::ranges::find_if(availFormats, [](vk::SurfaceFormatKHR const& format)
+		{
+			return format.format == vk::Format::eB8G8R8A8Srgb &&
+				format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+		});
+
+		return formatIt != availFormats.end() ? *formatIt : availFormats.front();
+	}
+
+	vk::PresentModeKHR ChooseSwapChainPresentMode(std::vector<vk::PresentModeKHR> const& availPresentModes)
+	{
+		return std::ranges::contains(availPresentModes, vk::PresentModeKHR::eMailbox)
+			? vk::PresentModeKHR::eMailbox
+			: vk::PresentModeKHR::eFifo;
+	}
+
+	vk::Extent2D ChooseSwapChainExtent(vk::SurfaceCapabilitiesKHR const& surfCaps)
+	{
+		if (surfCaps.currentExtent.width != std::numeric_limits<uint32_t>::max())
+			return surfCaps.currentExtent;
+
+		int widthPx, heightPx;
+		glfwGetFramebufferSize(m_wnd, &widthPx, &heightPx);
+
+		return vk::Extent2D
+		{
+			.width = std::clamp<uint32_t>(widthPx, surfCaps.minImageExtent.width, surfCaps.maxImageExtent.width),
+			.height = std::clamp<uint32_t>(heightPx, surfCaps.minImageExtent.height, surfCaps.maxImageExtent.height),
+		};
+	}
+
+	uint32_t ChooseSwapChainMinImageCount(vk::SurfaceCapabilitiesKHR const& surfCaps)
+	{
+		static constexpr uint32_t DesiredImagesCount = 3u;
+		if (surfCaps.maxImageCount == 0u)
+			return std::max(surfCaps.minImageCount, DesiredImagesCount);
+
+		return std::clamp(DesiredImagesCount, surfCaps.minImageCount, surfCaps.maxImageCount);
+	}
+
+	void CreateSwapChain()
+	{
+		vk::SurfaceCapabilitiesKHR const surfCaps = m_physicalDevice.getSurfaceCapabilitiesKHR(*m_surface);
+		
+		m_swapChainExtent = ChooseSwapChainExtent(surfCaps);
+		m_swapChainSurfaceFormat = ChooseSwapChainSurfaceFormat(m_physicalDevice.getSurfaceFormatsKHR(*m_surface));
+
+		m_swapChain = m_logicalDevice.createSwapchainKHR(vk::SwapchainCreateInfoKHR
+		{
+			.surface = m_surface,
+			.minImageCount = ChooseSwapChainMinImageCount(surfCaps),
+			.imageFormat = m_swapChainSurfaceFormat.format,
+			.imageColorSpace = m_swapChainSurfaceFormat.colorSpace,
+			.imageExtent = m_swapChainExtent,
+			.imageArrayLayers = 1,
+			.imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
+			.imageSharingMode = vk::SharingMode::eExclusive,
+			.preTransform = surfCaps.currentTransform,
+			.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+			.presentMode = ChooseSwapChainPresentMode(m_physicalDevice.getSurfacePresentModesKHR(*m_surface)),
+			.clipped = true,
+			.oldSwapchain = nullptr,
+		});
+
+		m_swapChainImages = m_swapChain.getImages();
 	}
 
 	void CreateLogicalDevice()
@@ -391,6 +461,10 @@ private:
 	vk::raii::Device m_logicalDevice = nullptr;
 	vk::raii::Queue m_graphicsQueue = nullptr;
 	vk::raii::SurfaceKHR m_surface = nullptr;
+	vk::raii::SwapchainKHR m_swapChain = nullptr;
+	std::vector<vk::Image> m_swapChainImages;
+	vk::SurfaceFormatKHR m_swapChainSurfaceFormat;
+	vk::Extent2D m_swapChainExtent;
 };
 
 int main()
