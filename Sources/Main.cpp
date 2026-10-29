@@ -54,22 +54,38 @@ private:
 	{
 		CreateVulkanInstance();
 		SetupDebugMessenger();
+		CreateSurface();
 		PickPhysicalDevice();
 		CreateLogicalDevice();
 	}
 
+	void CreateSurface()
+	{
+		VkSurfaceKHR surface;
+		if (glfwCreateWindowSurface(*m_instance, m_wnd, nullptr, &surface) != VK_SUCCESS)
+			throw std::runtime_error{"failed to create window surface"};
+
+		m_surface = vk::raii::SurfaceKHR{m_instance, std::move(surface)};
+	}
+
 	void CreateLogicalDevice()
 	{
-		auto const queueFamilyIndex = [this] -> uint32_t
-		{
-			std::vector<vk::QueueFamilyProperties> const& queueFamilyProps = m_physicalDevice.getQueueFamilyProperties();
-			auto const it = std::ranges::find_if(queueFamilyProps, [](vk::QueueFamilyProperties const& props)
-			{
-				return !!(props.queueFlags & vk::QueueFlagBits::eGraphics);
-			});
+		uint32_t queueFamilyIndex = std::numeric_limits<uint32_t>::max();
 
-			return std::distance(queueFamilyProps.begin(), it);
-		}();
+		std::vector<vk::QueueFamilyProperties> const& queueFamilyProps = m_physicalDevice.getQueueFamilyProperties();
+		for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProps.size(); ++qfpIndex)
+		{
+			vk::QueueFamilyProperties const& props = queueFamilyProps[qfpIndex];
+			if ((props.queueFlags & vk::QueueFlagBits::eGraphics) &&
+				m_physicalDevice.getSurfaceSupportKHR(qfpIndex, *m_surface))
+			{
+				queueFamilyIndex = qfpIndex;
+				break;
+			}
+		}
+
+		if (queueFamilyIndex == std::numeric_limits<uint32_t>::max())
+			throw std::runtime_error{"Could not find a queue for graphics and present -> terminating"};
 
 		static constexpr float QueuePriority = 1.0f;
 		vk::DeviceQueueCreateInfo deviceQueueCreateInfo
@@ -109,15 +125,34 @@ private:
 
 	void PickPhysicalDevice()
 	{
-		auto isDeviceSuitable = [](vk::raii::PhysicalDevice const & device)
+		auto isDeviceSuitable = [this](vk::raii::PhysicalDevice const & device)
 		{
 			vk::PhysicalDeviceProperties const& deviceProps = device.getProperties();
+			if (deviceProps.apiVersion < vk::ApiVersion13)
+				return false;
 
 			std::vector<vk::QueueFamilyProperties> const& queueFamiliesProps = device.getQueueFamilyProperties();
 			bool const isSupportGraphics = std::ranges::any_of(queueFamiliesProps, [](vk::QueueFamilyProperties const& props)
 			{
 				return !!(props.queueFlags & vk::QueueFlagBits::eGraphics);
 			});
+
+			if (!isSupportGraphics)
+				return false;
+
+			bool const isSupportSurface = [&]
+			{
+				for (size_t const qfpIndex : std::views::iota(0u, queueFamiliesProps.size()))
+				{
+					if (device.getSurfaceSupportKHR(qfpIndex, *m_surface))
+						return true;
+				}
+
+				return false;
+			}();
+
+			if (!isSupportSurface)
+				return false;
 
 			std::vector<char const*> requiredDeviceExtensions = { vk::KHRSwapchainExtensionName };
 			std::vector<vk::ExtensionProperties> const& deviceExtProps = device.enumerateDeviceExtensionProperties();
@@ -128,6 +163,8 @@ private:
 					return std::strcmp(props.extensionName, extName) == 0;
 				});
 			});
+			if (!isSupportsAllRequiredExtensions)
+				return false;
 
 			auto features = device.getFeatures2<
 				vk::PhysicalDeviceFeatures2,
@@ -141,8 +178,10 @@ private:
 				features.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering &&
 				features.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
 
-			return deviceProps.apiVersion >= vk::ApiVersion13 && isSupportGraphics &&
-				isSupportsAllRequiredExtensions && isSupportsAllRequiredFeatures;
+			if (!isSupportsAllRequiredFeatures)
+				return false;
+
+			return true;
 		};
 
 		std::vector<vk::raii::PhysicalDevice> const physicalDevices = m_instance.enumeratePhysicalDevices();
@@ -351,6 +390,7 @@ private:
 	vk::raii::PhysicalDevice m_physicalDevice = nullptr;
 	vk::raii::Device m_logicalDevice = nullptr;
 	vk::raii::Queue m_graphicsQueue = nullptr;
+	vk::raii::SurfaceKHR m_surface = nullptr;
 };
 
 int main()
